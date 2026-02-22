@@ -17,7 +17,7 @@
 // ----------------------------------------
 
 import axios from 'axios';
-import type { ApiResponse, FileInfo, Device, FileRecord, SyncRecord } from '../types';
+import type { ApiResponse, FileInfo, Device, FileRecord, SyncRecord, SyncPlanItem } from '../types';
 
 // [知识点 #202] Axios 实例配置
 // ----------------------------------------
@@ -72,6 +72,9 @@ export const fileApi = {
 
   getContent: (path: string) =>
     api.get(`/files/${path}`, { responseType: 'text' }),
+
+  createFolder: (path: string) =>
+    api.post<ApiResponse<FileInfo>>('/files', { path }).then(r => r.data),
 };
 
 // 设备 API
@@ -96,6 +99,16 @@ export const versionApi = {
 export const syncApi = {
   getSyncStatus: (fileId: string) =>
     api.get<ApiResponse<SyncRecord[]>>(`/syncs/${fileId}`).then(r => r.data),
+  
+  createSyncPlan: (localFiles: FileRecord[]) =>
+    api.post<ApiResponse<SyncPlanItem[]>>('/sync/plan', { local_files: localFiles }).then(r => r.data),
+  
+  executeSync: (fileId: string, deviceId: string, action: string) =>
+    api.post<ApiResponse<boolean>>('/sync/execute', { 
+      file_id: fileId, 
+      device_id: deviceId, 
+      action 
+    }).then(r => r.data),
 };
 
 export default api;

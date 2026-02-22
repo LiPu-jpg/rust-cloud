@@ -14,6 +14,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fileApi, deviceApi, versionApi, syncApi } from '../api';
+import type { FileRecord } from '../types';
 
 // [知识点 #205] useQuery 数据获取
 // ----------------------------------------
@@ -114,6 +115,17 @@ export const useDeleteFile = () => {
   });
 };
 
+export const useCreateFolder = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (path: string) => fileApi.createFolder(path),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+    },
+  });
+};
+
 // [知识点 #209] 条件查询
 // ----------------------------------------
 // 题目：enabled: !!path 是什么意思？
@@ -182,5 +194,24 @@ export const useSyncStatus = (fileId: string | null) => {
     queryKey: ['sync-status', fileId],
     queryFn: () => fileId ? syncApi.getSyncStatus(fileId) : Promise.resolve(null),
     enabled: !!fileId,
+  });
+};
+
+export const useSyncPlan = () => {
+  return useMutation({
+    mutationFn: (localFiles: FileRecord[]) => syncApi.createSyncPlan(localFiles),
+  });
+};
+
+export const useExecuteSync = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ fileId, deviceId, action }: { fileId: string; deviceId: string; action: string }) =>
+      syncApi.executeSync(fileId, deviceId, action),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sync-status'] });
+      queryClient.invalidateQueries({ queryKey: ['versions'] });
+    },
   });
 };

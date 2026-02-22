@@ -1,6 +1,6 @@
-import { Folder, HardDrive, History, Settings } from 'lucide-react';
+import { Folder, HardDrive, History, Settings, RefreshCw } from 'lucide-react';
 
-type Page = 'files' | 'devices' | 'versions';
+type Page = 'files' | 'devices' | 'versions' | 'sync';
 
 interface NavigationProps {
   currentPage: Page;
@@ -11,6 +11,7 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
   const navItems: { id: Page; label: string; icon: typeof Folder }[] = [
     { id: 'files', label: '文件管理', icon: Folder },
     { id: 'devices', label: '设备管理', icon: HardDrive },
+    { id: 'sync', label: '同步管理', icon: RefreshCw },
     { id: 'versions', label: '版本历史', icon: History },
   ];
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, FileText, Hash, Clock, HardDrive } from 'lucide-react';
 import type { FileInfo } from '../types';
 import { fileApi } from '../api';
-import { formatFileSize } from './FileList';
+import { formatFileSize } from '../utils';
 
 interface FilePreviewProps {
   file: FileInfo | null;
@@ -32,7 +32,7 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
           // 尝试解析为文本
           setContent(response.data.content || '');
         }
-      } catch (err) {
+      } catch {
         setError('无法加载文件内容');
       } finally {
         setLoading(false);

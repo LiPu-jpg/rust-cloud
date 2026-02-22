@@ -90,6 +90,12 @@ export interface SyncRecord {
 
 export type SyncStatus = 'PENDING' | 'SYNCING' | 'COMPLETED' | 'FAILED';
 
+export interface SyncPlanItem {
+  file_id: string;
+  path: string;
+  action: 'upload' | 'download' | 'delete' | 'skip';
+}
+
 export interface BreadcrumbItem {
   name: string;
   path: string;

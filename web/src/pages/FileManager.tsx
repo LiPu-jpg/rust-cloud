@@ -2,30 +2,33 @@ import { useState, useMemo } from 'react';
 import { FileList } from '../components/FileList';
 import { FileUpload } from '../components/FileUpload';
 import { FilePreview } from '../components/FilePreview';
-import { Breadcrumbs, buildBreadcrumbs } from '../components/Breadcrumbs';
-import { useFiles, useDeleteFile, useUploadFile } from '../hooks';
-import { RefreshCw, Search } from 'lucide-react';
+import { Breadcrumbs } from '../components/Breadcrumbs';
+import { buildBreadcrumbs } from '../utils';
+import { useFiles, useDeleteFile, useUploadFile, useCreateFolder } from '../hooks';
+import { RefreshCw, Search, FolderPlus } from 'lucide-react';
 import type { FileInfo } from '../types';
 
 export function FileManager() {
   const [currentPath, setCurrentPath] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showUpload, setShowUpload] = useState(false);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   const [previewFile, setPreviewFile] = useState<FileInfo | null>(null);
 
   const pathParam = currentPath || undefined;
   const { data: filesData, isLoading, refetch } = useFiles(pathParam);
   const deleteFile = useDeleteFile();
   const uploadFile = useUploadFile();
-
-  const allFiles = filesData?.data || [];
+  const createFolder = useCreateFolder();
   
   // 过滤文件（当前目录 + 搜索）
   const files = useMemo(() => {
+    const allFiles = filesData?.data || [];
     if (!searchQuery) return allFiles;
     const query = searchQuery.toLowerCase();
     return allFiles.filter(f => f.name.toLowerCase().includes(query));
-  }, [allFiles, searchQuery]);
+  }, [filesData?.data, searchQuery]);
 
   const breadcrumbs = useMemo(() => buildBreadcrumbs(currentPath), [currentPath]);
 
@@ -52,12 +55,23 @@ export function FileManager() {
     });
   };
 
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) return;
+    const fullPath = currentPath ? `${currentPath}/${newFolderName}` : newFolderName;
+    createFolder.mutate(fullPath, {
+      onSuccess: () => {
+        setShowNewFolder(false);
+        setNewFolderName('');
+        refetch();
+      },
+    });
+  };
+
   const handlePreview = (file: FileInfo) => {
     setPreviewFile(file);
   };
 
   const handleDownload = (file: FileInfo) => {
-    // 触发下载
     const fullPath = currentPath ? `${currentPath}/${file.name}` : file.name;
     window.open(`/api/files/${encodeURIComponent(fullPath)}`, '_blank');
   };
@@ -80,6 +94,13 @@ export function FileManager() {
             刷新
           </button>
           <button
+            onClick={() => setShowNewFolder(!showNewFolder)}
+            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            <FolderPlus className="w-4 h-4" />
+            新建文件夹
+          </button>
+          <button
             onClick={() => setShowUpload(!showUpload)}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
           >
@@ -91,6 +112,39 @@ export function FileManager() {
       {/* 面包屑导航 */}
       {currentPath && (
         <Breadcrumbs items={breadcrumbs} onNavigate={handleNavigate} />
+      )}
+
+      {/* 新建文件夹 */}
+      {showNewFolder && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="font-semibold mb-4">新建文件夹</h3>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="文件夹名称"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+            />
+            <button
+              onClick={handleCreateFolder}
+              disabled={createFolder.isPending || !newFolderName.trim()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 transition-colors"
+            >
+              {createFolder.isPending ? '创建中...' : '创建'}
+            </button>
+            <button
+              onClick={() => {
+                setShowNewFolder(false);
+                setNewFolderName('');
+              }}
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
+              取消
+            </button>
+          </div>
+        </div>
       )}
 
       {/* 搜索框 */}

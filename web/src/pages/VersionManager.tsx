@@ -2,15 +2,15 @@ import { useMemo, useState } from 'react';
 import { useVersions } from '../hooks';
 import { FileText, Clock, Hash, RefreshCw } from 'lucide-react';
 import type { FileRecord } from '../types';
-import { formatFileSize } from '../components/FileList';
+import { formatFileSize } from '../utils';
 
 export function VersionManager() {
   const { data: versionsData, isLoading, refetch } = useVersions();
-  const versions = versionsData?.data || [];
   const [filterPath, setFilterPath] = useState('');
 
   // 按文件路径分组
   const groupedVersions = useMemo(() => {
+    const versions = versionsData?.data || [];
     const groups: Record<string, FileRecord[]> = {};
     versions.forEach(v => {
       if (!groups[v.path]) {
@@ -24,7 +24,7 @@ export function VersionManager() {
       latest: recs.sort((a, b) => b.version - a.version)[0],
       count: recs.length,
     }));
-  }, [versions]);
+  }, [versionsData?.data]);
 
   // 过滤
   const filtered = useMemo(() => {
@@ -34,11 +34,14 @@ export function VersionManager() {
   }, [groupedVersions, filterPath]);
 
   // 统计
-  const stats = useMemo(() => ({
-    totalFiles: new Set(versions.map(v => v.path)).size,
-    totalVersions: versions.length,
-    totalSize: versions.reduce((sum, v) => sum + v.size, 0),
-  }), [versions]);
+  const stats = useMemo(() => {
+    const versions = versionsData?.data || [];
+    return {
+      totalFiles: new Set(versions.map(v => v.path)).size,
+      totalVersions: versions.length,
+      totalSize: versions.reduce((sum, v) => sum + v.size, 0),
+    };
+  }, [versionsData?.data]);
 
   return (
     <div className="space-y-6">

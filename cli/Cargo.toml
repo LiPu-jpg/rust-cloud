@@ -1,0 +1,24 @@
+[package]
+name = "rustcloud-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rcloud"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "multipart"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+sha2 = "0.10"
+notify = "8"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+dirs = "6"
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = "0.3"

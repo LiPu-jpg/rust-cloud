@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Folder, File, Trash2, MoreVertical, Eye, Download } from 'lucide-react';
 import type { FileInfo } from '../types';
+import { formatFileSize } from '../utils';
 
 interface FileTreeItemProps {
   file: FileInfo;
@@ -99,14 +100,6 @@ export function FileTreeItem({ file, onDelete, onPreview, onDownload }: FileTree
   );
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
 interface FileListProps {
   files: FileInfo[];
   onDelete: (path: string) => void;
@@ -153,5 +146,3 @@ export function FileList({ files, onDelete, onPreview, onDownload }: FileListPro
     </div>
   );
 }
-
-export { formatFileSize };

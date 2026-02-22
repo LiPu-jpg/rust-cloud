@@ -11,5 +11,11 @@
     }
   ],
   "syncs": [],
-  "devices": []
+  "devices": [
+    {
+      "id": "c50e95d0-a801-4b3a-bf48-c021ef779f8e",
+      "name": "MacBook Pro 01",
+      "last_seen": "2026-02-22T18:42:03.881986Z"
+    }
+  ]
 }

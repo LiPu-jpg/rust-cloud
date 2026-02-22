@@ -33,18 +33,3 @@ export function Breadcrumbs({ items, onNavigate }: BreadcrumbsProps) {
     </nav>
   );
 }
-
-export function buildBreadcrumbs(currentPath: string): BreadcrumbItem[] {
-  if (!currentPath) return [];
-  
-  const parts = currentPath.split('/').filter(Boolean);
-  const breadcrumbs: BreadcrumbItem[] = [];
-  
-  let path = '';
-  for (const part of parts) {
-    path = path ? `${path}/${part}` : part;
-    breadcrumbs.push({ name: part, path });
-  }
-  
-  return breadcrumbs;
-}

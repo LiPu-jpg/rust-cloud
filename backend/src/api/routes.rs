@@ -26,9 +26,10 @@ use std::sync::Arc;
 use utoipa::ToSchema;
 
 use crate::config::Config;
-use crate::db::{NewDeviceRecord, Repository};
+use crate::db::{FileRecord, NewDeviceRecord, Repository};
 use crate::error::Error;
 use crate::service::storage::{StorageConfig, StorageService};
+use crate::service::sync::{SyncAction, SyncEngine};
 
 // [知识点 #001] Arc 与 RwLock 的组合
 // ----------------------------------------
@@ -66,6 +67,7 @@ pub struct AppData {
     pub storage_path: std::path::PathBuf,
     pub repository: Repository,
     pub storage: StorageService,
+    pub sync_engine: SyncEngine,
     pub max_file_size: u64,
 }
 
@@ -113,6 +115,11 @@ impl ApiResponse {
 #[derive(Debug, Deserialize)]
 pub struct RegisterDeviceRequest {
     pub name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateFolderRequest {
+    pub path: String,
 }
 
 // TODO: 未来用于接收二进制文件上传
@@ -170,10 +177,12 @@ pub async fn create_router_with_services(
     repository: Arc<Repository>,
     storage: Arc<StorageService>,
 ) -> Router {
+    let sync_engine = SyncEngine::new(repository.clone());
     let state: AppState = Arc::new(AppData {
         storage_path: config.storage_path.clone(),
         repository: (*repository).clone(),
         storage: (*storage).clone(),
+        sync_engine,
         max_file_size: config.max_file_size,
     });
 
@@ -184,6 +193,7 @@ fn build_router(state: AppState) -> Router {
     Router::new()
         .route("/api/health", get(health_check))
         .route("/api/files", get(list_files))
+        .route("/api/files", post(create_folder))
         .route("/api/files/{*path}", get(get_file))
         .route("/api/files/{*path}", put(upload_file))
         .route("/api/files/{*path}", delete(delete_file))
@@ -192,6 +202,8 @@ fn build_router(state: AppState) -> Router {
         .route("/api/devices/{id}/heartbeat", post(device_heartbeat))
         .route("/api/versions", get(list_versions))
         .route("/api/syncs/{file_id}", get(get_sync_status))
+        .route("/api/sync/plan", post(create_sync_plan))
+        .route("/api/sync/execute", post(execute_sync))
         .with_state(state)
 }
 
@@ -214,6 +226,42 @@ async fn list_files(
     match list_directory(&target_path, base_path) {
         Ok(files) => Json(ApiResponse::success(files)),
         Err(e) => Json(ApiResponse::error(&e.to_string())),
+    }
+}
+
+async fn create_folder(
+    State(state): State<AppState>,
+    Json(req): Json<CreateFolderRequest>,
+) -> impl IntoResponse {
+    let folder_path = state.storage_path.join(&req.path);
+
+    if folder_path.exists() {
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error("Folder already exists")),
+        );
+    }
+
+    match tokio::fs::create_dir_all(&folder_path).await {
+        Ok(_) => {
+            let info = FileInfo {
+                name: folder_path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+                path: req.path,
+                is_dir: true,
+                size: 0,
+                modified: Some(chrono::Utc::now().to_rfc3339()),
+                hash: None,
+                version: None,
+            };
+            (StatusCode::OK, Json(ApiResponse::success(info)))
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(&format!("Failed to create folder: {}", e))),
+        ),
     }
 }
 
@@ -510,6 +558,79 @@ async fn get_sync_status(
                 "Failed to get sync status: {}",
                 e
             ))),
+        ),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SyncPlanRequest {
+    pub local_files: Vec<FileRecord>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SyncPlanItem {
+    pub file_id: String,
+    pub path: String,
+    pub action: String,
+}
+
+async fn create_sync_plan(
+    State(state): State<AppState>,
+    Json(req): Json<SyncPlanRequest>,
+) -> impl IntoResponse {
+    match state.sync_engine.create_sync_plan(&req.local_files).await {
+        Ok(plans) => {
+            let items: Vec<SyncPlanItem> = plans
+                .into_iter()
+                .map(|p| SyncPlanItem {
+                    file_id: p.file_id.to_string(),
+                    path: p.path,
+                    action: match p.action {
+                        SyncAction::Upload => "upload".to_string(),
+                        SyncAction::Download => "download".to_string(),
+                        SyncAction::Delete => "delete".to_string(),
+                        SyncAction::Skip => "skip".to_string(),
+                    },
+                })
+                .collect();
+            (StatusCode::OK, Json(ApiResponse::success(items)))
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(&format!("Failed to create sync plan: {}", e))),
+        ),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SyncExecuteRequest {
+    pub file_id: uuid::Uuid,
+    pub device_id: uuid::Uuid,
+    pub action: String,
+}
+
+async fn execute_sync(
+    State(state): State<AppState>,
+    Json(req): Json<SyncExecuteRequest>,
+) -> impl IntoResponse {
+    let action = match req.action.as_str() {
+        "upload" => SyncAction::Upload,
+        "download" => SyncAction::Download,
+        "delete" => SyncAction::Delete,
+        "skip" => SyncAction::Skip,
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error("Invalid action. Must be: upload, download, delete, or skip")),
+            );
+        }
+    };
+
+    match state.sync_engine.sync_file(req.file_id, req.device_id, action).await {
+        Ok(_) => (StatusCode::OK, Json(ApiResponse::success(true))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(&format!("Failed to execute sync: {}", e))),
         ),
     }
 }

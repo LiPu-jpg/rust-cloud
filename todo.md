@@ -1,102 +1,65 @@
 # RustCloud 开发计划
 
-## 项目重组完成 ✅
+## 功能实现状态总览
 
-### 目录结构优化 ✅
-- [x] 创建 backend/ 目录存放 Rust 代码
-- [x] 移动 tests/ 到 backend/
-- [x] 创建根目录 workspace Cargo.toml
-- [x] 更新 .gitignore
-
-### 一键启动脚本 ✅
-- [x] 创建 Makefile (make dev / make build / make test)
-- [x] 创建 start.sh 脚本
-- [x] 更新 README.md 使用说明
-
----
-
-## 后端功能 (backend/)
-
-### 已实现 ✅
-- [x] RESTful API (Axum)
-- [x] 文件存储 (SHA-256 去重)
-- [x] 分块存储
-- [x] 设备管理
-- [x] 文件监控
-- [x] OpenAPI/Swagger 文档
-- [x] 文件大小限制
-- [x] 结构化日志
-
-### 预留功能 🔄
-- [ ] VersionService API 集成
-- [ ] SyncEngine API 集成
-- [ ] SQLite 数据库迁移
-- [ ] 配置热重载
+### ✅ 已完成功能
+| 功能 | 服务端 | 前端 | CLI |
+|------|--------|------|-----|
+| 文件 CRUD | ✅ | ✅ | ✅ |
+| 创建文件夹 | ✅ | ✅ | ✅ |
+| 设备管理 | ✅ | ✅ | - |
+| 版本历史 | ✅ | ✅ | - |
+| 同步计划/执行 | ✅ | ✅ | ✅ |
+| 文件监控 | ✅ | - | - |
+| 哈希去重存储 | ✅ | - | - |
 
 ---
 
-## 前端功能 (web/)
+## CLI 客户端 (rcloud)
 
-### 已实现 ✅
-- [x] React 18 + TypeScript + Vite
-- [x] Tailwind CSS v4
-- [x] TanStack Query 数据管理
-- [x] 文件管理页面（浏览、导航）
-- [x] 拖拽上传
-- [x] 文件预览弹窗
-- [x] 面包屑导航
-- [x] 搜索功能
-- [x] 设备管理页面
-- [x] 设备在线状态
-- [x] 设备心跳
-- [x] 版本历史页面
-- [x] 版本统计
-- [x] 响应式 UI
-- [x] 更多菜单操作（删除/下载/预览）
+### 已实现命令
+```bash
+# 配置
+rcloud config --server http://127.0.0.1:3000 --device-name my-laptop
 
-### 待开发 📝
-- [ ] WebSocket 实时更新
-- [ ] 文件夹创建
-- [ ] 批量操作
-- [ ] 用户认证
+# 同步
+rcloud sync                    # 同步当前目录
+rcloud sync --path ~/Documents # 同步指定目录
+rcloud sync --dry-run          # 预览同步操作
+
+# 状态
+rcloud status                  # 查看同步状态
+
+# 文件操作
+rcloud ls                      # 列出远程文件
+rcloud ls --path /docs         # 列出指定目录
+rcloud upload local.txt        # 上传文件
+rcloud upload local.txt --remote-path docs/remote.txt
+rcloud download remote.txt     # 下载文件
+```
+
+### 待完善
+- [ ] 本地文件监控 (实时同步)
+- [ ] 增量同步 (只传输变化部分)
+- [ ] 断点续传
+- [ ] 冲突检测与解决
+- [ ] 本地状态数据库
 
 ---
 
 ## 一键启动
 
 ```bash
-# 方式 1: Makefile
-make dev
-
-# 方式 2: 启动脚本
-./start.sh all
-
-# 方式 3: 分别启动
+make dev        # 同时启动前后端
 make backend    # 后端: http://127.0.0.1:3000
 make frontend   # 前端: http://localhost:5173
+make test       # 运行测试
 
-# 构建生产版本
-make build
+# CLI 使用
+./target/release/rcloud --help
 ```
 
 ---
 
-## 访问地址
-
-开发环境：
-- 前端: http://localhost:5173
-- 后端: http://127.0.0.1:3000
-- API 文档: http://127.0.0.1:3000/swagger-ui
-
----
-
-## 验证状态
-
-- 后端测试: ✅ 13 passed
-- 前端构建: ✅ 成功
-- 项目结构: ✅ Monorepo
-
----
-
-最后更新: 2026-02-22
-状态: MVP 完成 ✅
+最后更新: 2026-02-23
+状态: CLI 客户端基础框架完成

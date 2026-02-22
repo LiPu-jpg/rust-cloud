@@ -131,8 +131,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         chunk_size: 4 * 1024 * 1024,
     }));
 
-    // 可选：启用文件监控
-    let _watcher = if std::env::var("RUSTCLOUD_WATCH")
+    // 启用文件监控（默认开启，可通过环境变量禁用）
+    let _watcher = if !std::env::var("RUSTCLOUD_NO_WATCH")
         .map(|v| v == "true")
         .unwrap_or(false)
     {
@@ -141,6 +141,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("File watcher started for: {:?}", config.storage_path);
         Some(watcher)
     } else {
+        tracing::info!("File watcher disabled by RUSTCLOUD_NO_WATCH=true");
         None
     };
 
